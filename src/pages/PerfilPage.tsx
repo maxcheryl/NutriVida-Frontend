@@ -3,11 +3,11 @@
  * contraseña. La sesión se sincroniza vía AuthContext.actualizarPerfil
  * (búsqueda por id, segura ante cambios de correo).
  */
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { EDAD_MAXIMA, OPCIONES_GENERO, OPCIONES_REGION } from '../constants'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
-import { buscarUsuarioPorCorreo } from '../services/storage'
+import { obtenerPerfil } from '../services/usuarioService'
 import type { Genero } from '../types'
 import { esDominioDuoc, validarContrasena } from '../utils/validators'
 import PasswordInput from '../ui/PasswordInput'
@@ -16,20 +16,35 @@ export default function PerfilPage() {
   const { usuario, actualizarPerfil } = useAuth()
   const { showToast } = useToast()
 
-  const usuarioCompleto = usuario ? buscarUsuarioPorCorreo(usuario.correo) : undefined
-
   const [nombre, setNombre] = useState(usuario?.nombre ?? '')
   const [apellido, setApellido] = useState(usuario?.apellido ?? '')
-  const [fechaNacimiento, setFechaNacimiento] = useState(usuarioCompleto?.fechaNacimiento ?? '')
+  const [fechaNacimiento, setFechaNacimiento] = useState('')
   const [correo, setCorreo] = useState(usuario?.correo ?? '')
   const [genero, setGenero] = useState<Genero | ''>(usuario?.genero ?? '')
-  const [direccion, setDireccion] = useState(usuarioCompleto?.direccion ?? '')
+  const [direccion, setDireccion] = useState('')
   const [region, setRegion] = useState(usuario?.region ?? '')
   const [contrasenaActual, setContrasenaActual] = useState('')
   const [nuevaContrasena, setNuevaContrasena] = useState('')
   const [confirmarNuevaContrasena, setConfirmarNuevaContrasena] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [errorContrasena, setErrorContrasena] = useState<string | null>(null)
+  const [guardando, setGuardando] = useState(false)
+
+  useEffect(() => {
+    obtenerPerfil()
+      .then((datos: any) => {
+        if (datos) {
+          setNombre(datos.nombre ?? '')
+          setApellido(datos.apellido ?? '')
+          setCorreo(datos.correo ?? '')
+          setFechaNacimiento(datos.fechaNacimiento ?? '')
+          setGenero(datos.genero ?? '')
+          setDireccion(datos.direccion ?? '')
+          setRegion(datos.region ?? '')
+        }
+      })
+      .catch(() => {})
+  }, [])
 
   const hoy = new Date().toISOString().split('T')[0]
 
@@ -48,7 +63,7 @@ export default function PerfilPage() {
 
   const edad = calcularEdadLocal(fechaNacimiento)
 
-  function manejarSubmit(e: FormEvent) {
+  async function manejarSubmit(e: FormEvent) {
     e.preventDefault()
     setError(null)
     setErrorContrasena(null)
@@ -60,14 +75,6 @@ export default function PerfilPage() {
 
     if (!esDominioDuoc(correo.trim())) {
       setError('El correo debe ser del dominio @duocuc.cl')
-      return
-    }
-
-    if (
-      buscarUsuarioPorCorreo(correo.trim()) &&
-      correo.trim().toLowerCase() !== usuario?.correo.toLowerCase()
-    ) {
-      setError('El correo ya se encuentra registrado')
       return
     }
 
@@ -97,11 +104,6 @@ export default function PerfilPage() {
         return
       }
 
-      if (usuarioCompleto?.contrasena !== contrasenaActual) {
-        setErrorContrasena('La contraseña actual es incorrecta')
-        return
-      }
-
       if (nuevaContrasena !== confirmarNuevaContrasena) {
         setErrorContrasena('Las contraseñas no coinciden')
         return
@@ -113,27 +115,34 @@ export default function PerfilPage() {
       }
     }
 
-    actualizarPerfil({
+    setGuardando(true)
+    const resultado = await actualizarPerfil({
       nombre: nombre.trim(),
       apellido: apellido.trim(),
-      correo: correo.trim(),
+      correo: correo.trim().toLowerCase(),
       fechaNacimiento,
       genero,
       direccion: direccion.trim(),
       region,
-      ...(quiereCambiarContrasena ? { contrasena: nuevaContrasena } : {}),
+      ...(quiereCambiarContrasena
+        ? { contrasenaActual, contrasenaNueva: nuevaContrasena }
+        : {}),
     })
+    setGuardando(false)
 
-    setContrasenaActual('')
-    setNuevaContrasena('')
-    setConfirmarNuevaContrasena('')
-
-    showToast(
-      quiereCambiarContrasena
-        ? 'Perfil y contraseña actualizados correctamente'
-        : 'Perfil actualizado correctamente',
-      'success',
-    )
+    if (resultado.exito) {
+      setContrasenaActual('')
+      setNuevaContrasena('')
+      setConfirmarNuevaContrasena('')
+      showToast(
+        quiereCambiarContrasena
+          ? 'Perfil y contraseña actualizados correctamente'
+          : 'Perfil actualizado correctamente',
+        'success',
+      )
+    } else {
+      setError(resultado.mensaje ?? 'Error al actualizar el perfil')
+    }
   }
 
   if (!usuario) return null

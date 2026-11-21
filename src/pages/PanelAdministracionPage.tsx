@@ -3,7 +3,7 @@
  * categorías, con validaciones completas, modales de confirmación y
  * protección de la cuenta propia.
  */
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import {
   EDAD_MAXIMA,
   IMAGEN_DEFECTO,
@@ -17,23 +17,24 @@ import { useAuth } from '../contexts/AuthContext'
 import { useCart } from '../contexts/CartContext'
 import { useToast } from '../contexts/ToastContext'
 import {
-  agregarCategoria,
-  agregarProducto,
-  agregarUsuario,
-  actualizarCategoria,
-  actualizarProducto,
+  listarUsuarios,
+  crearUsuario,
   actualizarUsuario,
-  buscarProductoPorCodigo,
-  buscarUsuarioPorCorreo,
-  cuposRetenidos,
-  eliminarCategoria,
-  eliminarProducto,
   eliminarUsuario,
-  obtenerCategorias,
-  obtenerCupoDisponible,
-  obtenerProductos,
-  obtenerUsuarios,
-} from '../services/storage'
+} from '../services/usuarioService'
+import {
+  listarProductos,
+  crearProducto,
+  actualizarProducto,
+  eliminarProducto,
+} from '../services/productoService'
+import {
+  listarCategorias,
+  crearCategoria,
+  actualizarCategoria,
+  eliminarCategoria,
+} from '../services/categoriaService'
+import { mensajeDeError } from '../api/axiosConfig'
 import type { Categoria, Genero, RolUsuario, Servicio, Usuario } from '../types'
 import AppModal from '../ui/AppModal'
 import PasswordInput from '../ui/PasswordInput'
@@ -63,6 +64,7 @@ const PRODUCTO_VACIO: Omit<Servicio, 'codigo'> = {
   precio: 0,
   cuposIniciales: 0,
   descripcion: '',
+  imagenUrl: '',
 }
 
 export default function PanelAdministracionPage() {
@@ -75,9 +77,9 @@ export default function PanelAdministracionPage() {
   fechaMinima.setFullYear(fechaMinima.getFullYear() - EDAD_MAXIMA)
   const minFecha = fechaMinima.toISOString().split('T')[0]
 
-  const [usuarios, setUsuarios] = useState<Usuario[]>(() => obtenerUsuarios())
-  const [productos, setProductos] = useState<Servicio[]>(() => obtenerProductos())
-  const [categorias, setCategorias] = useState<Categoria[]>(() => obtenerCategorias())
+  const [usuarios, setUsuarios] = useState<Usuario[]>([])
+  const [productos, setProductos] = useState<Servicio[]>([])
+  const [categorias, setCategorias] = useState<Categoria[]>([])
 
   const [modalUsuarioAbierto, setModalUsuarioAbierto] = useState(false)
   const [usuarioEditando, setUsuarioEditando] = useState<Usuario | null>(null)
@@ -98,11 +100,24 @@ export default function PanelAdministracionPage() {
 
   const [errorForm, setErrorForm] = useState<string | null>(null)
 
-  function refrescar() {
-    setUsuarios(obtenerUsuarios())
-    setProductos(obtenerProductos())
-    setCategorias(obtenerCategorias())
+  async function refrescar() {
+    try {
+      const [u, p, c] = await Promise.all([
+        listarUsuarios(),
+        listarProductos(),
+        listarCategorias(),
+      ])
+      setUsuarios(u)
+      setProductos(p)
+      setCategorias(c)
+    } catch (err) {
+      showToast(mensajeDeError(err), 'danger')
+    }
   }
+
+  useEffect(() => {
+    refrescar()
+  }, [])
 
   // ==================== USUARIOS ====================
   function abrirNuevoUsuario() {
@@ -129,7 +144,7 @@ export default function PanelAdministracionPage() {
     setModalUsuarioAbierto(true)
   }
 
-  function guardarUsuario(e: FormEvent) {
+  async function guardarUsuario(e: FormEvent) {
     e.preventDefault()
     setErrorForm(null)
 
@@ -166,38 +181,30 @@ export default function PanelAdministracionPage() {
       setErrorForm(`La edad máxima permitida es de ${EDAD_MAXIMA} años`)
       return
     }
-    if (
-      (!usuarioEditando ||
-        formUsuario.correo.trim().toLowerCase() !== usuarioEditando.correo.toLowerCase()) &&
-      buscarUsuarioPorCorreo(formUsuario.correo.trim())
-    ) {
-      setErrorForm('El correo ya se encuentra registrado')
-      return
-    }
 
-    // Editando la cuenta propia se conserva el rol de la sesión: nadie se
-    // puede auto-relevar de administrador desde el formulario.
     const editandoCuentaPropia = Boolean(usuarioEditando && esUsuarioActual(usuarioEditando.correo))
 
-    if (usuarioEditando) {
-      actualizarUsuario(usuarioEditando.correo, {
-        ...formUsuario,
-        rol: editandoCuentaPropia && usuario ? usuario.rol : formUsuario.rol,
-        correo: formUsuario.correo.trim(),
-      })
-      // La sesión guarda el correo anterior: hay que sincronizarla.
-      if (editandoCuentaPropia) refrescarSesion()
-      showToast('Usuario actualizado correctamente', 'success')
-    } else {
-      agregarUsuario({
-        id: crypto.randomUUID(),
-        ...formUsuario,
-        correo: formUsuario.correo.trim(),
-      })
-      showToast('Usuario creado correctamente', 'success')
+    try {
+      if (usuarioEditando) {
+        await actualizarUsuario(usuarioEditando.id, {
+          ...formUsuario,
+          rol: editandoCuentaPropia && usuario ? usuario.rol : formUsuario.rol,
+          correo: formUsuario.correo.trim().toLowerCase(),
+        })
+        if (editandoCuentaPropia) refrescarSesion()
+        showToast('Usuario actualizado correctamente', 'success')
+      } else {
+        await crearUsuario({
+          ...formUsuario,
+          correo: formUsuario.correo.trim().toLowerCase(),
+        })
+        showToast('Usuario creado correctamente', 'success')
+      }
+      setModalUsuarioAbierto(false)
+      refrescar()
+    } catch (err) {
+      setErrorForm(mensajeDeError(err))
     }
-    setModalUsuarioAbierto(false)
-    refrescar()
   }
 
   function esUsuarioActual(correo: string): boolean {
@@ -208,15 +215,19 @@ export default function PanelAdministracionPage() {
     setConfirmacion({ mensaje, onConfirmar })
   }
 
-  function manejarEliminarUsuario(correo: string) {
+  function manejarEliminarUsuario(id: string, correo: string) {
     if (esUsuarioActual(correo)) {
       setModalPropiaCuentaAbierto(true)
       return
     }
-    pedirConfirmacion(`¿Eliminar al usuario ${correo}?`, () => {
-      eliminarUsuario(correo)
-      showToast('Usuario eliminado', 'warning')
-      refrescar()
+    pedirConfirmacion(`¿Eliminar al usuario ${correo}?`, async () => {
+      try {
+        await eliminarUsuario(id)
+        showToast('Usuario eliminado', 'warning')
+        refrescar()
+      } catch (err) {
+        showToast(mensajeDeError(err), 'danger')
+      }
     })
   }
 
@@ -236,14 +247,15 @@ export default function PanelAdministracionPage() {
       duracion: p.duracion,
       modalidad: p.modalidad,
       precio: p.precio,
-      cuposIniciales: Math.max(0, obtenerCupoDisponible(p.codigo)),
+      cuposIniciales: Math.max(0, p.cuposIniciales),
       descripcion: p.descripcion,
+      imagenUrl: p.imagenUrl ?? '',
     })
     setErrorForm(null)
     setModalProductoAbierto(true)
   }
 
-  function guardarProducto(e: FormEvent) {
+  async function guardarProducto(e: FormEvent) {
     e.preventDefault()
     setErrorForm(null)
 
@@ -272,35 +284,41 @@ export default function PanelAdministracionPage() {
       return
     }
 
-    if (productoEditando) {
-      // Lo ingresado en el formulario son cupos LIBRES: se suman los retenidos
-      // (carrito+reservado) para obtener el nuevo total del producto.
-      actualizarProducto(productoEditando.codigo, {
-        ...formProducto,
-        cuposIniciales: formProducto.cuposIniciales + cuposRetenidos(productoEditando.codigo),
-      })
-      showToast('Producto actualizado correctamente', 'success')
-    } else {
-      // Código único con prefijo de categoría (CN0457…); el while reintenta si
-      // por milagro el sufijo del timestamp ya existe.
-      const prefijo = formProducto.tipo.charAt(0).toUpperCase() + formProducto.tipo.charAt(1)
-      let codigo = `${prefijo}${Date.now().toString().slice(-4)}`
-      while (buscarProductoPorCodigo(codigo)) {
-        codigo = `${prefijo}${Date.now().toString().slice(-4)}`
+    try {
+      if (productoEditando) {
+        await actualizarProducto(productoEditando.codigo, {
+          ...formProducto,
+          codigo: productoEditando.codigo,
+        })
+        showToast('Producto actualizado correctamente', 'success')
+      } else {
+        const prefijo = formProducto.tipo.slice(0, 2).toUpperCase()
+        const codigo = `${prefijo}${Date.now().toString().slice(-4)}`
+        await crearProducto({
+          codigo,
+          ...formProducto,
+          imagen: IMAGEN_DEFECTO,
+          imagenUrl: formProducto.imagenUrl || undefined,
+        })
+        showToast('Producto creado correctamente', 'success')
       }
-      agregarProducto({ codigo, ...formProducto, imagen: IMAGEN_DEFECTO })
-      showToast('Producto creado correctamente', 'success')
+      setModalProductoAbierto(false)
+      refrescar()
+    } catch (err) {
+      setErrorForm(mensajeDeError(err))
     }
-    setModalProductoAbierto(false)
-    refrescar()
   }
 
   function manejarEliminarProducto(codigo: string) {
-    pedirConfirmacion(`¿Eliminar el producto ${codigo}?`, () => {
-      eliminarProducto(codigo)
-      sincronizar()
-      showToast('Producto eliminado', 'warning')
-      refrescar()
+    pedirConfirmacion(`¿Eliminar el producto ${codigo}?`, async () => {
+      try {
+        await eliminarProducto(codigo)
+        sincronizar()
+        showToast('Producto eliminado', 'warning')
+        refrescar()
+      } catch (err) {
+        showToast(mensajeDeError(err), 'danger')
+      }
     })
   }
 
@@ -319,7 +337,7 @@ export default function PanelAdministracionPage() {
     setModalCategoriaAbierto(true)
   }
 
-  function guardarCategoria(e: FormEvent) {
+  async function guardarCategoria(e: FormEvent) {
     e.preventDefault()
     setErrorForm(null)
 
@@ -336,28 +354,32 @@ export default function PanelAdministracionPage() {
       return
     }
 
-    if (categoriaEditando) {
-      actualizarCategoria(categoriaEditando.id, nombreCategoria.trim())
-      showToast('Categoría actualizada', 'success')
-    } else {
-      agregarCategoria(nombreCategoria.trim())
-      showToast('Categoría creada', 'success')
+    try {
+      if (categoriaEditando) {
+        await actualizarCategoria(categoriaEditando.id, nombreCategoria.trim())
+        showToast('Categoría actualizada', 'success')
+      } else {
+        await crearCategoria(nombreCategoria.trim())
+        showToast('Categoría creada', 'success')
+      }
+      setModalCategoriaAbierto(false)
+      refrescar()
+    } catch (err) {
+      setErrorForm(mensajeDeError(err))
     }
-    setModalCategoriaAbierto(false)
-    refrescar()
   }
 
   function manejarEliminarCategoria(id: string) {
     const cat = categorias.find((c) => c.id === id)
     if (!cat) return
-    pedirConfirmacion(`¿Eliminar la categoría "${cat.nombre}"?`, () => {
-      const ok = eliminarCategoria(id)
-      if (ok) {
+    pedirConfirmacion(`¿Eliminar la categoría "${cat.nombre}"?`, async () => {
+      try {
+        await eliminarCategoria(id)
         showToast('Categoría eliminada', 'warning')
-      } else {
-        showToast(`No se puede eliminar: hay productos usando "${cat.nombre}"`, 'danger')
+        refrescar()
+      } catch (err) {
+        showToast(mensajeDeError(err), 'danger')
       }
-      refrescar()
     })
   }
 
@@ -451,7 +473,7 @@ export default function PanelAdministracionPage() {
                             </button>
                             <button
                               className="btn btn-sm btn-outline-danger rounded-pill"
-                              onClick={() => manejarEliminarUsuario(u.correo)}
+                              onClick={() => manejarEliminarUsuario(u.id, u.correo)}
                             >
                               <i className="bi bi-trash me-1" />
                               Eliminar
@@ -498,7 +520,7 @@ export default function PanelAdministracionPage() {
                           <td>{formatPrecio(p.precio)}</td>
                           <td>
                             <StockBadge
-                              disponible={Math.max(0, obtenerCupoDisponible(p.codigo))}
+                              disponible={Math.max(0, p.cuposIniciales)}
                             />
                           </td>
                           <td className="text-end">
@@ -842,6 +864,24 @@ export default function PanelAdministracionPage() {
                         setFormProducto({ ...formProducto, descripcion: e.target.value })
                       }
                     />
+                  </div>
+                  <div className="col-12">
+                    <label className="form-label">
+                      <i className="bi bi-image me-1 text-success" />
+                      URL de la imagen (Internet)
+                    </label>
+                    <input
+                      type="url"
+                      className="form-control"
+                      placeholder="https://ejemplo.com/imagen.jpg"
+                      value={formProducto.imagenUrl ?? ''}
+                      onChange={(e) =>
+                        setFormProducto({ ...formProducto, imagenUrl: e.target.value })
+                      }
+                    />
+                    <small className="text-muted">
+                      Ingresa la dirección web de una imagen para mostrarla en el catálogo y detalle.
+                    </small>
                   </div>
                 </div>
                 {errorForm && <div className="alert alert-danger mt-3 mb-0">{errorForm}</div>}

@@ -3,17 +3,12 @@
  * (edita cupos libres) y pestaña de alta de clientes con las mismas
  * validaciones que el registro (dominio, contraseñas y edades).
  */
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { EDAD_MAXIMA, OPCIONES_GENERO, STOCK_MAXIMO } from '../constants'
 import { useToast } from '../contexts/ToastContext'
-import {
-  agregarUsuario,
-  actualizarProducto,
-  buscarUsuarioPorCorreo,
-  cuposRetenidos,
-  obtenerCupoDisponible,
-  obtenerProductos,
-} from '../services/storage'
+import { listarProductos, actualizarStock } from '../services/productoService'
+import { crearUsuario } from '../services/usuarioService'
+import { mensajeDeError } from '../api/axiosConfig'
 import type { Genero, Servicio } from '../types'
 import PasswordInput from '../ui/PasswordInput'
 import StockBadge from '../ui/StockBadge'
@@ -25,13 +20,19 @@ type Pestana = 'stock' | 'clientes'
 export default function GestionPage() {
   const { showToast } = useToast()
   const [pestana, setPestana] = useState<Pestana>('stock')
-  const [productos, setProductos] = useState<Servicio[]>(() => obtenerProductos())
+  const [productos, setProductos] = useState<Servicio[]>([])
   const [stockEditado, setStockEditado] = useState<Record<string, number>>({})
   const [errorStock, setErrorStock] = useState<string | null>(null)
   const hoy = new Date().toISOString().split('T')[0]
   const fechaMinima = new Date()
   fechaMinima.setFullYear(fechaMinima.getFullYear() - EDAD_MAXIMA)
   const minFecha = fechaMinima.toISOString().split('T')[0]
+
+  useEffect(() => {
+    listarProductos()
+      .then((data) => setProductos(data))
+      .catch(() => {})
+  }, [])
 
   const [formCliente, setFormCliente] = useState({
     nombre: '',
@@ -50,7 +51,7 @@ export default function GestionPage() {
     setStockEditado({ ...stockEditado, [codigo]: valor })
   }
 
-  function guardarStock(codigo: string) {
+  async function guardarStock(codigo: string) {
     setErrorStock(null)
     const nuevoStock = stockEditado[codigo]
     if (nuevoStock === undefined) return
@@ -59,16 +60,19 @@ export default function GestionPage() {
       setErrorStock(`El stock de ${codigo} debe ser un número entero entre 0 y ${STOCK_MAXIMO}`)
       return
     }
-    // Lo ingresado son cupos LIBRES: se suma lo retenido (carrito+reservado)
-    // para obtener el nuevo total del producto.
-    actualizarProducto(codigo, { cuposIniciales: nuevoStock + cuposRetenidos(codigo) })
-    setProductos(obtenerProductos())
-    // undefined = sin edición pendiente en esta fila.
-    setStockEditado({ ...stockEditado, [codigo]: undefined as unknown as number })
-    showToast('Stock actualizado correctamente', 'success')
+    try {
+      await actualizarStock(codigo, nuevoStock)
+      const data = await listarProductos()
+      setProductos(data)
+      // undefined = sin edición pendiente en esta fila.
+      setStockEditado({ ...stockEditado, [codigo]: undefined as unknown as number })
+      showToast('Stock actualizado correctamente', 'success')
+    } catch (err) {
+      setErrorStock(mensajeDeError(err))
+    }
   }
 
-  function manejarCrearCliente(e: FormEvent) {
+  async function manejarCrearCliente(e: FormEvent) {
     e.preventDefault()
     setErrorCliente(null)
 
@@ -105,35 +109,34 @@ export default function GestionPage() {
       setErrorCliente(`La edad máxima permitida es de ${EDAD_MAXIMA} años`)
       return
     }
-    if (buscarUsuarioPorCorreo(formCliente.correo.trim())) {
-      setErrorCliente('El correo ya se encuentra registrado')
-      return
+
+    try {
+      await crearUsuario({
+        nombre: formCliente.nombre.trim(),
+        apellido: formCliente.apellido.trim(),
+        correo: formCliente.correo.trim().toLowerCase(),
+        fechaNacimiento: formCliente.fechaNacimiento,
+        contrasena: formCliente.contrasena,
+        genero: formCliente.genero as Genero | '',
+        region: formCliente.region,
+        direccion: formCliente.direccion.trim(),
+        rol: 'cliente',
+      })
+
+      showToast('Cliente registrado correctamente', 'success')
+      setFormCliente({
+        nombre: '',
+        apellido: '',
+        correo: '',
+        fechaNacimiento: '',
+        contrasena: '',
+        genero: '',
+        region: '',
+        direccion: '',
+      })
+    } catch (err) {
+      setErrorCliente(mensajeDeError(err))
     }
-
-    agregarUsuario({
-      id: crypto.randomUUID(),
-      nombre: formCliente.nombre.trim(),
-      apellido: formCliente.apellido.trim(),
-      correo: formCliente.correo.trim(),
-      fechaNacimiento: formCliente.fechaNacimiento,
-      contrasena: formCliente.contrasena,
-      genero: formCliente.genero as Genero | '',
-      region: formCliente.region,
-      direccion: formCliente.direccion.trim(),
-      rol: 'cliente',
-    })
-
-    showToast('Cliente registrado correctamente', 'success')
-    setFormCliente({
-      nombre: '',
-      apellido: '',
-      correo: '',
-      fechaNacimiento: '',
-      contrasena: '',
-      genero: '',
-      region: '',
-      direccion: '',
-    })
   }
 
   return (
@@ -198,7 +201,7 @@ export default function GestionPage() {
                           <td>{formatPrecio(p.precio)}</td>
                           <td>
                             <StockBadge
-                              disponible={Math.max(0, obtenerCupoDisponible(p.codigo))}
+                              disponible={Math.max(0, p.cuposIniciales)}
                             />
                           </td>
                           <td style={{ width: '120px' }}>
@@ -210,7 +213,7 @@ export default function GestionPage() {
                               step={1}
                               value={
                                 stockEditado[p.codigo] ??
-                                Math.max(0, obtenerCupoDisponible(p.codigo))
+                                Math.max(0, p.cuposIniciales)
                               }
                               onChange={(e) =>
                                 manejarStockChange(
