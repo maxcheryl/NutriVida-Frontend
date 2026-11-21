@@ -116,6 +116,15 @@ export default function Navbar() {
                   )}
                   <li className="nav-item">
                     <Link
+                      className={`nav-link${location.pathname === '/historial' ? ' active' : ''}`}
+                      to="/historial"
+                    >
+                      <i className="bi bi-clock-history me-1" />
+                      Mis reservas
+                    </Link>
+                  </li>
+                  <li className="nav-item">
+                    <Link
                       className={`nav-link${location.pathname === '/perfil' ? ' active' : ''}`}
                       to="/perfil"
                     >

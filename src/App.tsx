@@ -16,6 +16,7 @@ import AccesoDenegadoPage from './pages/AccesoDenegadoPage'
 import CarritoPage from './pages/CarritoPage'
 import DetallePage from './pages/DetallePage'
 import GestionPage from './pages/GestionPage'
+import HistorialPage from './pages/HistorialPage'
 import HomePage from './pages/HomePage'
 import LoginPage from './pages/LoginPage'
 import NotFoundPage from './pages/NotFoundPage'
@@ -43,6 +44,14 @@ export default function App() {
                 element={
                   <ProtectedRoute>
                     <PerfilPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/historial"
+                element={
+                  <ProtectedRoute>
+                    <HistorialPage />
                   </ProtectedRoute>
                 }
               />

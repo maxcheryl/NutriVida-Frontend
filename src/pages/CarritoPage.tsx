@@ -10,7 +10,6 @@ import { useAuth } from '../contexts/AuthContext'
 import { useCart } from '../contexts/CartContext'
 import { useToast } from '../contexts/ToastContext'
 import Breadcrumb from '../layout/Breadcrumb'
-import { buscarProductoPorCodigo } from '../services/storage'
 import AppModal from '../ui/AppModal'
 import { formatPrecio } from '../utils/format'
 
@@ -24,22 +23,20 @@ export default function CarritoPage() {
   const [modalVaciarAbierto, setModalVaciarAbierto] = useState(false)
   const [modalLoginAbierto, setModalLoginAbierto] = useState(false)
   const [modalExitoAbierto, setModalExitoAbierto] = useState(false)
+  const [confirmando, setConfirmando] = useState(false)
 
-  // Precio actual del catálogo (no el copiado al agregar): si el admin editó
-  // el producto, el total y los subtotales se recalculan con el valor vigente.
-  const total = carrito.reduce((sum, s) => {
-    const precio = buscarProductoPorCodigo(s.codigo)?.precio ?? s.precio
-    return sum + precio * s.cantidad
-  }, 0)
+  // Total del carrito calculado a partir de los ítems en memoria
+  const total = carrito.reduce((sum, s) => sum + s.precio * s.cantidad, 0)
 
   function agregarDesdeCarrito(codigo: string) {
-    const disponibles = cupoDisponible(codigo)
+    const item = carrito.find((i) => i.codigo === codigo)
+    if (!item) return
+    const disponibles = cupoDisponible(codigo, item.cuposIniciales)
     if (disponibles <= 0) {
       showToast('No hay más cupos disponibles', 'warning')
       return
     }
-    const servicio = buscarProductoPorCodigo(codigo)
-    if (servicio) agregarAlCarrito(servicio)
+    agregarAlCarrito(item)
   }
 
   function reducirDesdeCarrito(codigo: string) {
@@ -50,14 +47,13 @@ export default function CarritoPage() {
     eliminarDelCarrito(codigo)
   }
 
-  function manejarConfirmarReserva() {
+  async function manejarConfirmarReserva() {
     if (!usuario) {
       setModalLoginAbierto(true)
       return
     }
-    // Revalida cupos: negativo = el admin redujo el stock con estos ítems en
-    // el carrito; en ese caso se bloquea la confirmación para no sobre-reservar.
-    const excedido = carrito.find((item) => cupoDisponible(item.codigo) < 0)
+    // Revalida cupos antes de enviar
+    const excedido = carrito.find((item) => cupoDisponible(item.codigo, item.cuposIniciales) < 0)
     if (excedido) {
       showToast(
         `No hay cupos suficientes para "${excedido.nombre}". Ajusta tu reserva para continuar`,
@@ -65,8 +61,16 @@ export default function CarritoPage() {
       )
       return
     }
-    confirmarReserva()
-    setModalExitoAbierto(true)
+
+    setConfirmando(true)
+    const resultado = await confirmarReserva()
+    setConfirmando(false)
+
+    if (resultado.exito) {
+      setModalExitoAbierto(true)
+    } else {
+      showToast(resultado.mensaje ?? 'No se pudo confirmar la reserva', 'danger')
+    }
   }
 
   function manejarConfirmarVaciar() {
@@ -158,8 +162,8 @@ export default function CarritoPage() {
                           </thead>
                           <tbody>
                             {carrito.map((servicio) => {
-                              const cupos = cupoDisponible(servicio.codigo)
-                              const datos = buscarProductoPorCodigo(servicio.codigo) ?? servicio
+                              const cupos = cupoDisponible(servicio.codigo, servicio.cuposIniciales)
+                              const datos = servicio
                               return (
                                 <tr className="border-bottom" key={servicio.codigo}>
                                   <td className="ps-4 py-3">
@@ -264,8 +268,8 @@ export default function CarritoPage() {
                     {/* CARDS MOBILE */}
                     <div className="card-body p-3 carrito-mobile-card d-md-none">
                       {carrito.map((servicio) => {
-                        const cupos = cupoDisponible(servicio.codigo)
-                        const datos = buscarProductoPorCodigo(servicio.codigo) ?? servicio
+                        const cupos = cupoDisponible(servicio.codigo, servicio.cuposIniciales)
+                        const datos = servicio
                         return (
                           <div className="border rounded-3 p-3 mb-3" key={servicio.codigo}>
                             <div className="d-flex justify-content-between align-items-start mb-2">
@@ -384,9 +388,10 @@ export default function CarritoPage() {
                     <button
                       className="btn btn-success w-100 rounded-pill fw-medium py-2 mb-2"
                       onClick={manejarConfirmarReserva}
+                      disabled={confirmando}
                     >
                       <i className="bi bi-calendar-check me-2" />
-                      Confirmar reserva(s)
+                      {confirmando ? 'Procesando reserva...' : 'Confirmar reserva(s)'}
                     </button>
 
                     <Link
@@ -503,20 +508,31 @@ export default function CarritoPage() {
                 <i className="bi bi-check-circle fs-1" />
               </div>
             </div>
-            <h4 className="fw-bold text-dark mb-2">¡Reserva(s) confirmada!</h4>
+            <h4 className="fw-bold text-dark mb-2">¡Reserva confirmada!</h4>
             <p className="text-muted mb-4">
-              Tus servicios han sido agendados exitosamente. Te esperamos en Clínica NutriVida.
+              Tus servicios han sido agendados exitosamente. Puedes revisar los detalles y precios en tu historial.
             </p>
-            <div>
+            <div className="d-flex justify-content-center gap-2 flex-wrap">
               <button
                 type="button"
-                className="btn btn-success rounded-pill px-5"
+                className="btn btn-outline-secondary rounded-pill px-4"
                 onClick={() => {
                   setModalExitoAbierto(false)
                   navigate('/')
                 }}
               >
-                Entendido
+                Volver al inicio
+              </button>
+              <button
+                type="button"
+                className="btn btn-success rounded-pill px-4"
+                onClick={() => {
+                  setModalExitoAbierto(false)
+                  navigate('/historial')
+                }}
+              >
+                <i className="bi bi-clock-history me-1" />
+                Ver mis reservas
               </button>
             </div>
           </div>
