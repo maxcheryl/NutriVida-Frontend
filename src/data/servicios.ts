@@ -1,6 +1,5 @@
 /**
- * Catálogo sembrado de servicios (se inserta en localStorage la primera vez)
- * + utilidades de presentación por categoría (badge e ícono).
+ * Catálogo referencial de servicios y utilidades de presentación por categoría (badge e ícono).
  */
 import type { Servicio } from '../types'
 

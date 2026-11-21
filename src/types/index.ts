@@ -6,7 +6,10 @@
 /** Roles que puede tener un usuario. */
 export type RolUsuario = 'administrador' | 'recepcionista' | 'cliente'
 
-/** Producto/servicio del catálogo. `imagen` es opcional: sin ella se usa la default. */
+/**
+ * Producto/servicio del catálogo. `imagen` es la local por defecto y
+ * `imagenUrl` la URL externa ingresada en los formularios (Fase 11.1).
+ */
 export interface Servicio {
   codigo: string
   tipo: string
@@ -17,6 +20,7 @@ export interface Servicio {
   cuposIniciales: number
   descripcion: string
   imagen?: string
+  imagenUrl?: string
 }
 
 /** Categoría del catálogo; los productos la referencian por nombre (`tipo`). */
@@ -27,7 +31,7 @@ export interface Categoria {
 
 export type Genero = 'Mujer' | 'Hombre' | 'Otro' | 'NoDice'
 
-/** Registro completo de usuario guardado en localStorage. */
+/** Registro de usuario en el sistema. */
 export interface Usuario {
   id: string
   nombre: string
@@ -42,7 +46,7 @@ export interface Usuario {
   avatar?: string
 }
 
-/** Datos del usuario en sesión (persistida en `CLAVE_SESION`); nunca incluye la contraseña. */
+/** Datos del usuario en sesión activa; nunca incluye la contraseña. */
 export interface Sesion {
   id: string
   nombre: string

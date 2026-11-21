@@ -1,16 +1,7 @@
 /**
- * Constantes globales: claves de localStorage, límites de validación,
- * umbrales de UI y catálogos de opciones de formularios.
+ * Constantes globales: límites de validación, umbrales de UI y
+ * catálogos de opciones de formularios.
  */
-
-// ============ PERSISTENCIA (claves de localStorage) ============
-export const CLAVE_USUARIOS = 'nutrivida_usuarios'
-export const CLAVE_SESION = 'usuarioLogueado'
-export const CLAVE_INTENTOS = 'nutrivida_intentos'
-export const CLAVE_CARRITO = 'nutrivida_carrito'
-export const CLAVE_RESERVADOS = 'nutrivida_reservados'
-export const CLAVE_PRODUCTOS = 'nutrivida_productos'
-export const CLAVE_CATEGORIAS = 'nutrivida_categorias'
 
 // ============ LÍMITES DE VALIDACIÓN Y UMBRALES ============
 /** Intentos fallidos de login antes de bloquear la cuenta. */
