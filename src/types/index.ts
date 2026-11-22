@@ -42,7 +42,6 @@ export interface Usuario {
   region: string
   direccion: string
   rol: RolUsuario
-  avatar?: string
 }
 
 /** Datos del usuario en sesión activa; nunca incluye la contraseña. */
