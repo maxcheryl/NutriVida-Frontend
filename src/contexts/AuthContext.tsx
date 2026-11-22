@@ -54,9 +54,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Escuchar cuando el interceptor detecte que no se pudo renovar el token
     setAlExpirarSesion(() => {
       setUsuario(null)
-      navigate('/login')
     })
-  }, [navigate])
+  }, [])
 
   async function iniciarSesion(correoInput: string, contrasena: string): Promise<ResultadoAuth> {
     const correo = correoInput.trim().toLowerCase()

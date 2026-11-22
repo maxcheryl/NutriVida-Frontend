@@ -12,7 +12,8 @@ interface AdminRouteProps {
 }
 
 export default function AdminRoute({ children }: AdminRouteProps) {
-  const { usuario } = useAuth()
+  const { usuario, cargando } = useAuth()
+  if (cargando) return null
   if (!usuario) return <Navigate to="/login" replace />
   if (!esAdmin(usuario)) return <Navigate to="/acceso-denegado" replace />
   return <>{children}</>
