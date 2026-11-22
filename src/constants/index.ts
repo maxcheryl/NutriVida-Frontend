@@ -19,7 +19,8 @@ export const PRECIO_MINIMO = 1000
 export const PRECIO_MAXIMO = 10000000
 export const STOCK_MAXIMO = 1000
 /** Imagen usada cuando un producto no tiene imagen propia. */
-export const IMAGEN_DEFECTO = '/assets/img/servicioDefault.jpg'
+export const IMAGEN_DEFECTO =
+  'https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=800&auto=format&fit=crop&q=80'
 
 // ============ AUTENTICACIÓN ============
 /** Dominio de correo exigido en todos los formularios de usuario. */

@@ -171,7 +171,7 @@ export default function DetallePage() {
     )
   }
 
-  const imagen = servicio.imagenUrl || servicio.imagen || IMAGEN_DEFECTO
+  const imagen = servicio.imagenUrl || IMAGEN_DEFECTO
   const listaIncluye = QUE_INCLUYE_POR_TIPO[servicio.tipo] || LISTA_FALLBACK
 
   return (
@@ -225,6 +225,12 @@ export default function DetallePage() {
                     alt={servicio.nombre}
                     className="img-fluid rounded-3"
                     style={{ maxHeight: '280px', width: 'auto', objectFit: 'contain' }}
+                    onError={(e) => {
+                      const target = e.currentTarget
+                      if (target.src !== IMAGEN_DEFECTO) {
+                        target.src = IMAGEN_DEFECTO
+                      }
+                    }}
                   />
                 </div>
 

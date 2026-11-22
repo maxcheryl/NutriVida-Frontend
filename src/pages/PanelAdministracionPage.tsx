@@ -297,7 +297,6 @@ export default function PanelAdministracionPage() {
         await crearProducto({
           codigo,
           ...formProducto,
-          imagen: IMAGEN_DEFECTO,
           imagenUrl: formProducto.imagenUrl || undefined,
         })
         showToast('Producto creado correctamente', 'success')

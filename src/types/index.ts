@@ -7,8 +7,8 @@
 export type RolUsuario = 'administrador' | 'recepcionista' | 'cliente'
 
 /**
- * Producto/servicio del catálogo. `imagen` es la local por defecto y
- * `imagenUrl` la URL externa ingresada en los formularios (Fase 11.1).
+ * Producto/servicio del catálogo. `imagenUrl` es la URL web externa
+ * (Fase 11 / migraciones V1 y V3).
  */
 export interface Servicio {
   codigo: string
@@ -19,7 +19,6 @@ export interface Servicio {
   precio: number
   cuposIniciales: number
   descripcion: string
-  imagen?: string
   imagenUrl?: string
 }
 
