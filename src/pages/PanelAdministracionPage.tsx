@@ -34,15 +34,19 @@ import {
   actualizarCategoria,
   eliminarCategoria,
 } from '../services/categoriaService'
+import {
+  listarTodasOrdenes,
+  cancelarOrden,
+} from '../services/ordenService'
 import { mensajeDeError } from '../api/axiosConfig'
-import type { Categoria, Genero, RolUsuario, Servicio, Usuario } from '../types'
+import type { Categoria, Genero, RolUsuario, Servicio, Usuario, Orden } from '../types'
 import AppModal from '../ui/AppModal'
 import PasswordInput from '../ui/PasswordInput'
 import StockBadge from '../ui/StockBadge'
-import { formatPrecio } from '../utils/format'
+import { formatPrecio, formatearCodigoOrden } from '../utils/format'
 import { validarContrasena, esDominioDuoc, calcularEdad } from '../utils/validators'
 
-type Pestana = 'usuarios' | 'productos' | 'categorias'
+type Pestana = 'usuarios' | 'productos' | 'categorias' | 'ordenes'
 
 const USUARIO_VACIO: Omit<Usuario, 'id'> = {
   nombre: '',
@@ -80,6 +84,11 @@ export default function PanelAdministracionPage() {
   const [usuarios, setUsuarios] = useState<Usuario[]>([])
   const [productos, setProductos] = useState<Servicio[]>([])
   const [categorias, setCategorias] = useState<Categoria[]>([])
+  const [ordenes, setOrdenes] = useState<Orden[]>([])
+  const [ordenDetalle, setOrdenDetalle] = useState<Orden | null>(null)
+  const [modalDetalleOrden, setModalDetalleOrden] = useState(false)
+  const [filtroEstadoOrden, setFiltroEstadoOrden] = useState<'TODAS' | 'RESERVADA' | 'CANCELADA'>('TODAS')
+  const [busquedaOrden, setBusquedaOrden] = useState('')
 
   const [modalUsuarioAbierto, setModalUsuarioAbierto] = useState(false)
   const [usuarioEditando, setUsuarioEditando] = useState<Usuario | null>(null)
@@ -102,14 +111,16 @@ export default function PanelAdministracionPage() {
 
   async function refrescar() {
     try {
-      const [u, p, c] = await Promise.all([
+      const [u, p, c, o] = await Promise.all([
         listarUsuarios(),
         listarProductos(),
         listarCategorias(),
+        listarTodasOrdenes(),
       ])
       setUsuarios(u)
       setProductos(p)
       setCategorias(c)
+      setOrdenes(o)
     } catch (err) {
       showToast(mensajeDeError(err), 'danger')
     }
@@ -382,6 +393,53 @@ export default function PanelAdministracionPage() {
     })
   }
 
+  // ==================== ÓRDENES Y RESERVAS GLOBALES ====================
+  function formatearFecha(isoString: string): string {
+    try {
+      const fecha = new Date(isoString)
+      return fecha.toLocaleDateString('es-CL', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    } catch {
+      return isoString
+    }
+  }
+
+  function manejarCancelarOrden(orden: Orden) {
+    const codigo = formatearCodigoOrden(orden.id)
+    pedirConfirmacion(
+      `¿Estás seguro de cancelar la orden ${codigo} del cliente "${orden.cliente || 'Desconocido'}"? Se devolverán los cupos automáticamente a la base de datos.`,
+      async () => {
+        try {
+          await cancelarOrden(orden.id)
+          sincronizar()
+          showToast(`Orden ${codigo} cancelada exitosamente`, 'warning')
+          refrescar()
+        } catch (err) {
+          showToast(mensajeDeError(err), 'danger')
+        }
+      },
+    )
+  }
+
+  function verDetalleOrden(o: Orden) {
+    setOrdenDetalle(o)
+    setModalDetalleOrden(true)
+  }
+
+  const ordenesFiltradas = ordenes.filter((o) => {
+    const coincideEstado = filtroEstadoOrden === 'TODAS' || o.estado === filtroEstadoOrden
+    const texto = busquedaOrden.trim().toLowerCase()
+    const codigo = formatearCodigoOrden(o.id).toLowerCase()
+    const cliente = (o.cliente ?? '').toLowerCase()
+    const coincideBusqueda = !texto || codigo.includes(texto) || cliente.includes(texto)
+    return coincideEstado && coincideBusqueda
+  })
+
   return (
     <main className="pt-5">
       <section className="py-5 mt-2">
@@ -417,6 +475,15 @@ export default function PanelAdministracionPage() {
               >
                 <i className="bi bi-tags me-1" />
                 Categorías ({categorias.length})
+              </button>
+            </li>
+            <li className="nav-item" role="presentation">
+              <button
+                className={`nav-link${pestana === 'ordenes' ? ' active' : ''}`}
+                onClick={() => setPestana('ordenes')}
+              >
+                <i className="bi bi-receipt me-1" />
+                Reservas globales ({ordenes.length})
               </button>
             </li>
           </ul>
@@ -593,6 +660,138 @@ export default function PanelAdministracionPage() {
                     </tbody>
                   </table>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* PESTAÑA ÓRDENES Y RESERVAS GLOBALES */}
+          {pestana === 'ordenes' && (
+            <div className="card border-0 shadow-sm rounded-4">
+              <div className="card-header bg-white border-0 pt-3 px-4 d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <div>
+                  <h5 className="fw-bold mb-1">Historial Global de Reservas</h5>
+                  <p className="text-muted small mb-0">
+                    Auditoría de compras y reservas de todos los clientes de la clínica
+                  </p>
+                </div>
+                <div className="d-flex flex-wrap align-items-center gap-2">
+                  <div className="input-group input-group-sm" style={{ width: '240px' }}>
+                    <span className="input-group-text bg-light border-end-0 text-muted">
+                      <i className="bi bi-search" />
+                    </span>
+                    <input
+                      type="text"
+                      className="form-control bg-light border-start-0"
+                      placeholder="Buscar por código o cliente..."
+                      value={busquedaOrden}
+                      onChange={(e) => setBusquedaOrden(e.target.value)}
+                    />
+                  </div>
+                  <div className="btn-group btn-group-sm" role="group">
+                    <button
+                      type="button"
+                      className={`btn ${filtroEstadoOrden === 'TODAS' ? 'btn-success' : 'btn-outline-secondary'}`}
+                      onClick={() => setFiltroEstadoOrden('TODAS')}
+                    >
+                      Todas ({ordenes.length})
+                    </button>
+                    <button
+                      type="button"
+                      className={`btn ${filtroEstadoOrden === 'RESERVADA' ? 'btn-success' : 'btn-outline-secondary'}`}
+                      onClick={() => setFiltroEstadoOrden('RESERVADA')}
+                    >
+                      Reservadas ({ordenes.filter((o) => o.estado === 'RESERVADA').length})
+                    </button>
+                    <button
+                      type="button"
+                      className={`btn ${filtroEstadoOrden === 'CANCELADA' ? 'btn-success' : 'btn-outline-secondary'}`}
+                      onClick={() => setFiltroEstadoOrden('CANCELADA')}
+                    >
+                      Canceladas ({ordenes.filter((o) => o.estado === 'CANCELADA').length})
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="card-body px-4 pb-4">
+                {ordenesFiltradas.length === 0 ? (
+                  <div className="text-center py-5 text-muted">
+                    <i className="bi bi-inbox fs-1 d-block mb-2 text-secondary opacity-50" />
+                    <p className="mb-0">No se encontraron reservas con los filtros seleccionados.</p>
+                  </div>
+                ) : (
+                  <div className="table-responsive">
+                    <table className="table table-hover align-middle">
+                      <thead className="table-light text-muted small text-uppercase">
+                        <tr>
+                          <th>Código</th>
+                          <th>Cliente</th>
+                          <th>Fecha</th>
+                          <th>Total</th>
+                          <th>Estado</th>
+                          <th className="text-end">Acciones</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {ordenesFiltradas.map((o) => {
+                          const esReservada = o.estado === 'RESERVADA'
+                          return (
+                            <tr key={o.id}>
+                              <td>
+                                <span className="badge bg-light text-dark border px-2 py-1 rounded-pill fw-semibold">
+                                  <i className="bi bi-receipt me-1 text-success" />
+                                  {formatearCodigoOrden(o.id)}
+                                </span>
+                              </td>
+                              <td>
+                                <div className="d-flex align-items-center gap-2">
+                                  <i className="bi bi-person-circle text-secondary fs-5" />
+                                  <strong className="text-dark">{o.cliente || 'Cliente anónimo'}</strong>
+                                </div>
+                              </td>
+                              <td className="small text-muted">{formatearFecha(o.fecha)}</td>
+                              <td className="fw-bold text-dark">{formatPrecio(o.total)}</td>
+                              <td>
+                                <span
+                                  className={`badge rounded-pill px-3 py-1 ${
+                                    esReservada
+                                      ? 'bg-success-subtle text-success border border-success-subtle'
+                                      : 'bg-danger-subtle text-danger border border-danger-subtle'
+                                  }`}
+                                >
+                                  <i className={`bi ${esReservada ? 'bi-check-circle' : 'bi-x-circle'} me-1`} />
+                                  {o.estado}
+                                </span>
+                              </td>
+                              <td className="text-end">
+                                <button
+                                  className="btn btn-sm btn-outline-secondary rounded-pill me-2 px-3"
+                                  onClick={() => verDetalleOrden(o)}
+                                  title="Ver desglose de la reserva"
+                                >
+                                  <i className="bi bi-eye me-1" />
+                                  Ver detalle
+                                </button>
+                                {esReservada ? (
+                                  <button
+                                    className="btn btn-sm btn-outline-danger rounded-pill px-3"
+                                    onClick={() => manejarCancelarOrden(o)}
+                                    title="Cancelar orden y devolver cupos"
+                                  >
+                                    <i className="bi bi-x-circle me-1" />
+                                    Cancelar
+                                  </button>
+                                ) : (
+                                  <span className="text-muted small fst-italic">Cancelada</span>
+                                )}
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -1023,6 +1222,88 @@ export default function PanelAdministracionPage() {
               >
                 <i className="bi bi-trash me-1" />
                 Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+      </AppModal>
+
+      {/* MODAL DETALLE DE ORDEN */}
+      <AppModal show={modalDetalleOrden} onHide={() => setModalDetalleOrden(false)}>
+        <div className="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+          <div className="modal-content rounded-4 border-0 shadow">
+            <div className="modal-header border-0 pb-0">
+              <div>
+                <h5 className="modal-title fw-bold text-dark mb-1">
+                  Detalle de Reserva {ordenDetalle ? formatearCodigoOrden(ordenDetalle.id) : ''}
+                </h5>
+                <p className="text-muted small mb-0">
+                  Cliente: <strong>{ordenDetalle?.cliente || 'No especificado'}</strong> | Fecha: {ordenDetalle ? formatearFecha(ordenDetalle.fecha) : ''}
+                </p>
+              </div>
+              <button
+                type="button"
+                className="btn-close"
+                onClick={() => setModalDetalleOrden(false)}
+                aria-label="Cerrar"
+              />
+            </div>
+            <div className="modal-body">
+              <div className="table-responsive">
+                <table className="table align-middle">
+                  <thead className="table-light small text-uppercase text-secondary">
+                    <tr>
+                      <th>Servicio</th>
+                      <th className="text-center" style={{ width: '90px' }}>Cant.</th>
+                      <th className="text-end" style={{ width: '130px' }}>Precio unit.</th>
+                      <th className="text-end" style={{ width: '130px' }}>Subtotal</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {ordenDetalle?.detalles && ordenDetalle.detalles.length > 0 ? (
+                      ordenDetalle.detalles.map((d) => (
+                        <tr key={d.id}>
+                          <td>
+                            <strong className="d-block text-dark">{d.productoNombre}</strong>
+                            <small className="text-muted">Código: {d.productoCodigo}</small>
+                          </td>
+                          <td className="text-center">
+                            <span className="badge bg-light text-dark border px-2 py-1 rounded-pill">
+                              {d.cantidad}
+                            </span>
+                          </td>
+                          <td className="text-end">{formatPrecio(d.precioUnitario)}</td>
+                          <td className="text-end fw-semibold">{formatPrecio(d.subtotal)}</td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={4} className="text-center py-3 text-muted">
+                          Sin líneas de detalle registradas.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                  <tfoot>
+                    <tr className="table-light border-top">
+                      <td colSpan={3} className="text-end fw-bold text-dark pt-3">
+                        Total Pagado:
+                      </td>
+                      <td className="text-end fw-bold text-success fs-5 pt-3">
+                        {ordenDetalle ? formatPrecio(ordenDetalle.total) : '$0'}
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+            <div className="modal-footer border-0 pt-0">
+              <button
+                type="button"
+                className="btn btn-light rounded-pill px-4"
+                onClick={() => setModalDetalleOrden(false)}
+              >
+                Cerrar
               </button>
             </div>
           </div>

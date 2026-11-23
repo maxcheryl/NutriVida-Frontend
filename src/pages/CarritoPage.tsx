@@ -11,7 +11,8 @@ import { useCart } from '../contexts/CartContext'
 import { useToast } from '../contexts/ToastContext'
 import Breadcrumb from '../layout/Breadcrumb'
 import AppModal from '../ui/AppModal'
-import { formatPrecio } from '../utils/format'
+import type { Orden } from '../types'
+import { formatPrecio, formatearCodigoOrden } from '../utils/format'
 
 export default function CarritoPage() {
   const { carrito, totalUnidades, cupoDisponible, agregarAlCarrito, reducirCantidad, eliminarDelCarrito, vaciarCarrito, confirmarReserva } =
@@ -24,6 +25,7 @@ export default function CarritoPage() {
   const [modalLoginAbierto, setModalLoginAbierto] = useState(false)
   const [modalExitoAbierto, setModalExitoAbierto] = useState(false)
   const [confirmando, setConfirmando] = useState(false)
+  const [ordenConfirmada, setOrdenConfirmada] = useState<Orden | null>(null)
 
   // Total del carrito calculado a partir de los ítems en memoria
   const total = carrito.reduce((sum, s) => sum + s.precio * s.cantidad, 0)
@@ -67,6 +69,7 @@ export default function CarritoPage() {
     setConfirmando(false)
 
     if (resultado.exito) {
+      if (resultado.orden) setOrdenConfirmada(resultado.orden)
       setModalExitoAbierto(true)
     } else {
       showToast(resultado.mensaje ?? 'No se pudo confirmar la reserva', 'danger')
@@ -509,6 +512,14 @@ export default function CarritoPage() {
               </div>
             </div>
             <h4 className="fw-bold text-dark mb-2">¡Reserva confirmada!</h4>
+            {ordenConfirmada && (
+              <div className="mb-3">
+                <span className="badge bg-light text-dark border px-3 py-2 rounded-pill fs-6 fw-semibold">
+                  <i className="bi bi-receipt me-1 text-success" />
+                  Código de orden: {formatearCodigoOrden(ordenConfirmada.id)}
+                </span>
+              </div>
+            )}
             <p className="text-muted mb-4">
               Tus servicios han sido agendados exitosamente. Puedes revisar los detalles y precios en tu historial.
             </p>

@@ -8,7 +8,7 @@ import { Link } from 'react-router-dom'
 import Breadcrumb from '../layout/Breadcrumb'
 import { listarMisOrdenes } from '../services/ordenService'
 import type { Orden } from '../types'
-import { formatPrecio } from '../utils/format'
+import { formatPrecio, formatearCodigoOrden } from '../utils/format'
 
 export default function HistorialPage() {
   const [ordenes, setOrdenes] = useState<Orden[]>([])
@@ -117,7 +117,7 @@ export default function HistorialPage() {
                       <div className="d-flex align-items-center gap-3">
                         <span className="badge bg-light text-dark border px-3 py-2 rounded-pill fs-6 fw-semibold">
                           <i className="bi bi-receipt me-1 text-success" />
-                          Orden #{orden.id}
+                          Código de orden: {formatearCodigoOrden(orden.id)}
                         </span>
                         <span className="text-muted small">
                           <i className="bi bi-calendar3 me-1" />
