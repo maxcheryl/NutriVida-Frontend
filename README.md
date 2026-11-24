@@ -1,66 +1,119 @@
-# Clínica NutriVida
+# Clínica NutriVida — Frontend
+
+Proyecto de frontend correspondiente a la **Evaluación 3 (IE3)** de la asignatura **DSY1104**. Es una aplicación web para que clientes de la Clínica NutriVida consulten servicios nutricionales y realicen reservas.
 
 ## Sobre el proyecto
 
-Clínica NutriVida es una aplicación web adaptada desde la tienda desarrollada en la primera evaluación. En esta versión, la aplicación se migró a **React, TypeScript, Vite y Bootstrap 5**, manteniendo sus funcionalidades principales y adaptándolas al contexto de una clínica nutricional.
+Este repositorio contiene la interfaz de usuario de NutriVida. La aplicación consume la API REST Spring Boot del repositorio backend para obtener el catálogo y gestionar autenticación, perfiles y órdenes.
 
-El sistema incluye un catálogo de servicios, filtros, carrito, reservas, inicio de sesión, registro de usuarios, perfiles y paneles de gestión según el rol. También conserva las validaciones y reglas de negocio de la versión anterior.
+## Funcionalidades
+
+- Inicio con productos destacados cargados desde la API.
+- Catálogo de servicios, categorías, filtros y vista de detalle.
+- Carrito y confirmación de reservas; consulta del historial de órdenes.
+- Registro, inicio y cierre de sesión; persistencia y renovación de sesión mediante cookies JWT `HttpOnly`.
+- Perfil de usuario y restricciones de rutas y acciones según el rol.
+- Paneles de administración y recepción para las funciones autorizadas.
+- Formularios con validaciones y mensajes en español.
+
+### Roles
+
+- **Administrador:** gestiona usuarios, productos, categorías y órdenes.
+- **Recepcionista:** gestiona las funciones de recepción, como modificar cupos/stock, registrar clientes y consultar órdenes.
+- **Cliente:** consulta servicios, crea reservas, revisa su historial y administra su perfil.
+
+Las operaciones disponibles están limitadas también por los permisos que aplica el backend.
+
+## Endpoints utilizados
+
+La API local usa el prefijo `http://localhost:8080/api/v1`. Entre los recursos consumidos por el frontend están:
+
+| Recurso | Operaciones |
+| --- | --- |
+| `/auth` | `POST /login`, `/registro`, `/refresh`, `/logout`; `GET /me` |
+| `/productos` | `GET` y `GET /{identificador}`; `POST`; `PUT /{identificador}` y `PUT /{identificador}/stock`; `DELETE /{identificador}` |
+| `/categorias` | `GET` y `GET /{id}`; `POST`; `PUT /{id}`; `DELETE /{id}` |
+| `/usuarios` | `GET` y `GET /{id}`; `POST`; `PUT /{id}` y `PUT /{id}/activar`; `DELETE /{id}` |
+| `/ordenes` | `POST`; `GET /mias`, `GET`, `GET /{id}`; `PUT /{id}/cancelar` |
+| `/perfil` | `GET`; `PUT` |
+
+El inicio de sesión, registro, renovación/cierre de sesión y las consultas `GET` de productos y categorías son públicos. Las demás operaciones requieren autenticación y permisos de rol. Los errores de la API se responden en JSON.
+
+Swagger UI: [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)  
+Especificación OpenAPI: [http://localhost:8080/v3/api-docs](http://localhost:8080/v3/api-docs)
+
+## Credenciales de demostración
+
+El backend crea estas cuentas al ejecutar sus migraciones iniciales:
+
+| Rol | Correo |
+| --- | --- |
+| Administrador | `admin@duocuc.cl` |
+| Recepcionista | `recepcion@duocuc.cl` |
+| Cliente | `cliente@duocuc.cl` |
+
+**Contraseña común:** `Nutrivida2026`
+
+Son cuentas compartidas para demostración local. No deben utilizarse en producción; reemplázalas por credenciales seguras antes de desplegar.
 
 ## Tecnologías utilizadas
 
-- **React:** desarrollo de interfaces mediante componentes.
-- **TypeScript:** definición de tipos y detección de errores.
-- **Vite:** entorno de desarrollo y compilación.
-- **Bootstrap 5:** estilos y diseño adaptable a distintos dispositivos.
-- **React Router:** navegación y protección de rutas.
-- **LocalStorage:** almacenamiento de usuarios y datos de la aplicación en el navegador.
+- React 19, TypeScript 5.8 y Vite 6.
+- Bootstrap 5 y Bootstrap Icons.
+- Axios para las solicitudes HTTP.
+- React Router 7 para navegación y rutas protegidas.
+- API relacionada: Java 21, Spring Boot 4.1.2, MySQL y Spring Security.
 
 ## Estructura del proyecto
 
-El código está organizado por responsabilidades dentro de `src/`:
-
-- **`pages/`**: páginas principales, como Inicio, Servicios, Carrito, Login, Registro, Perfil y los paneles de gestión.
-- **`components/`**: componentes relacionados con la protección de rutas y el acceso según el rol.
-- **`ui/`**: elementos reutilizables, como modales, campos de contraseña e indicadores de stock.
-- **`layout/`**: elementos compartidos, como Navbar, Footer y Breadcrumb.
-- **`contexts/`**: gestión del usuario conectado, el carrito y las notificaciones.
-- **`services/`**: funciones para guardar y recuperar datos de LocalStorage.
-- **`utils/`**: validaciones, permisos y formato de precios.
-- **`types/`**: tipos e interfaces de TypeScript.
-- **`constants/` y `data/`**: constantes y datos iniciales del catálogo.
-
-## Roles y permisos
-
-La aplicación cuenta con tres roles:
-
-- **Administrador:** gestiona usuarios, productos y categorías, además de las funciones administrativas disponibles.
-- **Recepcionista:** consulta productos, modifica el stock y crea usuarios con rol de cliente. No puede gestionar categorías, eliminar productos ni asignar roles de personal.
-- **Cliente:** accede a las funciones disponibles para los usuarios de la aplicación.
-
-El registro público crea cuentas de cliente y cada usuario puede editar su perfil sin modificar su propio rol.
-
-## Decisiones de implementación
-
-- **Componentes reutilizables:** se comparten elementos como los campos de contraseña, los modales de confirmación y los indicadores de stock.
-- **Contextos de React:** se utilizan para compartir información de la sesión, el carrito y las notificaciones entre distintos componentes.
-- **Rutas protegidas:** el acceso a las páginas se controla según el rol del usuario.
-- **Validaciones:** los formularios comprueban datos como fechas de nacimiento, correos institucionales, contraseñas, precios y stock, mostrando mensajes en español.
-- **Almacenamiento centralizado:** las operaciones de lectura y escritura de LocalStorage se gestionan desde `services/storage.ts`.
-
-El rol `recepcionista` adapta el rol de vendedor de la versión original al contexto de la clínica, manteniendo las restricciones de permisos correspondientes.
-
-## Cómo ejecutar el proyecto
-
-Se necesita tener Node.js y npm instalados.
-
-```bash
-npm install
-npm run dev
+```text
+Frontend/
+├── src/
+│   ├── api/          # Axios y configuración de la API
+│   ├── assets/       # Recursos estáticos
+│   ├── components/   # Componentes reutilizables y protección de rutas
+│   ├── constants/    # Constantes de la aplicación
+│   ├── contexts/     # Estado compartido de sesión, carrito y notificaciones
+│   ├── data/         # Datos auxiliares
+│   ├── layout/       # Navbar, footer y estructura compartida
+│   ├── pages/        # Vistas de la aplicación
+│   ├── services/     # Funciones de acceso a recursos del backend
+│   ├── types/        # Tipos TypeScript
+│   ├── ui/           # Elementos de interfaz reutilizables
+│   └── utils/        # Validaciones y utilidades
+├── package.json
+└── vite.config.ts
 ```
 
-Para compilar el proyecto:
+## Requisitos
+
+- Node.js y npm.
+- Un navegador web moderno.
+- El backend NutriVida iniciado en `http://localhost:8080`.
+- Para que el backend funcione: JDK 21 y MySQL con la base `nutrivida` preparada. Consulta el README del repositorio backend para sus pasos de instalación.
+
+La dirección de la API está configurada en `src/api/axiosConfig.ts` como `http://localhost:8080/api/v1`. Para otra dirección, actualiza esa configuración y permite el origen del frontend en CORS en el backend.
+
+## Pasos para ejecutar
+
+1. Inicia MySQL y el backend. La base de datos debe estar creada y Flyway debe haber ejecutado sus migraciones.
+2. Desde la raíz de este repositorio, instala dependencias e inicia Vite:
+
+   ```bash
+   npm install
+   npm run dev
+   ```
+
+3. Abre la dirección que muestra Vite, normalmente [http://localhost:5173](http://localhost:5173).
+
+Para generar la compilación de producción:
 
 ```bash
 npm run build
 ```
 
+## Notas de seguridad
+
+- La sesión usa cookies JWT `HttpOnly`; no almacenes ni publiques tokens de sesión.
+- Las credenciales y la configuración incluidas son solo para desarrollo y demostración local.
+- Configura credenciales propias y seguras antes de publicar o desplegar el sistema.
