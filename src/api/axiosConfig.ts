@@ -26,13 +26,12 @@ api.interceptors.response.use(
   async (error: AxiosError) => {
     const config = error.config as ConfigReintento | undefined
     const url = config?.url ?? ''
-    // login/registro/logout/refresh/me no deben disparar un refresh en cadena ni expirar sesión
+    // login/registro/logout/refresh no deben disparar un refresh en cadena
     const sinRefresh = [
       '/auth/login',
       '/auth/registro',
       '/auth/logout',
       '/auth/refresh',
-      '/auth/me',
     ].some((ruta) => url.includes(ruta))
     if (error.response?.status === 401 && config && !config._reintento && !sinRefresh) {
       config._reintento = true
