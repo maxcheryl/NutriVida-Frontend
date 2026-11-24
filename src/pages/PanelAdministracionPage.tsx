@@ -6,7 +6,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import {
   EDAD_MAXIMA,
-  IMAGEN_DEFECTO,
   OPCIONES_GENERO,
   OPCIONES_ROL,
   PRECIO_MAXIMO,

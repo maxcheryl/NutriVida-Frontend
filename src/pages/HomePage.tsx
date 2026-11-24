@@ -4,11 +4,24 @@
  */
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useLocation } from 'react-router-dom'
+import { listarProductos } from '../services/productoService'
+import type { Servicio } from '../types'
+import { formatPrecio } from '../utils/format'
 import AppModal from '../ui/AppModal'
 import { esDominioDuoc } from '../utils/validators'
 
+const PRODUCTOS_DESTACADOS = [
+  { codigo: 'CN001', icono: 'bi-heart-pulse' },
+  { codigo: 'PL001', icono: 'bi-clipboard2-pulse' },
+  { codigo: 'EV001', icono: 'bi-activity' },
+] as const
+
 export default function HomePage() {
   const location = useLocation()
+
+  const [productos, setProductos] = useState<Servicio[]>([])
+  const [cargandoProductos, setCargandoProductos] = useState(true)
+  const [errorProductos, setErrorProductos] = useState<string | null>(null)
 
   const [nombre, setNombre] = useState('')
   const [email, setEmail] = useState('')
@@ -23,6 +36,20 @@ export default function HomePage() {
       if (el) el.scrollIntoView({ behavior: 'smooth' })
     }
   }, [location.hash])
+
+  useEffect(() => {
+    async function cargarProductos() {
+      try {
+        setProductos(await listarProductos())
+      } catch {
+        setErrorProductos('No se pudo conectar con el catálogo de servicios.')
+      } finally {
+        setCargandoProductos(false)
+      }
+    }
+
+    cargarProductos()
+  }, [])
 
   // Contacto: valida vacíos, largo mínimo del mensaje y dominio institucional;
   // el formulario usa noValidate para que los errores salgan en el cuadrito rojo.
@@ -84,57 +111,40 @@ export default function HomePage() {
             </div>
 
             <div className="row g-4 justify-content-center">
-              <div className="col-md-4">
-                <div className="card card-servicio">
-                  <div className="card-body">
-                    <div className="card-icon">
-                      <i className="bi bi-heart-pulse" />
-                    </div>
-                    <h5 className="card-title">Primera consulta nutricional</h5>
-                    <p className="card-text">
-                      Primera evaluación nutricional completa para diseñar tu plan personalizado.
-                    </p>
-                    <div className="card-price">$35.000</div>
-                    <Link to="/servicios/CN001" className="btn">
-                      Ver más
-                    </Link>
-                  </div>
+              {cargandoProductos && (
+                <div className="col-12 text-center" role="status">
+                  Cargando productos destacados...
                 </div>
-              </div>
-              <div className="col-md-4">
-                <div className="card card-servicio">
-                  <div className="card-body">
-                    <div className="card-icon">
-                      <i className="bi bi-clipboard2-pulse" />
-                    </div>
-                    <h5 className="card-title">Plan de pérdida de peso</h5>
-                    <p className="card-text">
-                      Plan de alimentación de 1 mes con seguimiento y ajustes semanales.
-                    </p>
-                    <div className="card-price">$65.000</div>
-                    <Link to="/servicios/PL001" className="btn">
-                      Ver más
-                    </Link>
-                  </div>
+              )}
+              {errorProductos && (
+                <div className="col-12 text-center" role="alert">
+                  {errorProductos}
                 </div>
-              </div>
-              <div className="col-md-4">
-                <div className="card card-servicio">
-                  <div className="card-body">
-                    <div className="card-icon">
-                      <i className="bi bi-activity" />
+              )}
+              {!cargandoProductos &&
+                !errorProductos &&
+                PRODUCTOS_DESTACADOS.map(({ codigo, icono }) => {
+                  const producto = productos.find((item) => item.codigo === codigo)
+                  if (!producto) return null
+
+                  return (
+                    <div className="col-md-4" key={producto.codigo}>
+                      <div className="card card-servicio">
+                        <div className="card-body">
+                          <div className="card-icon">
+                            <i className={`bi ${icono}`} />
+                          </div>
+                          <h5 className="card-title">{producto.nombre}</h5>
+                          <p className="card-text">{producto.descripcion}</p>
+                          <div className="card-price">{formatPrecio(producto.precio)}</div>
+                          <Link to={`/servicios/${producto.codigo}`} className="btn">
+                            Ver más
+                          </Link>
+                        </div>
+                      </div>
                     </div>
-                    <h5 className="card-title">Antropometría completa</h5>
-                    <p className="card-text">
-                      Evaluación completa de composición corporal con mediciones detalladas.
-                    </p>
-                    <div className="card-price">$18.000</div>
-                    <Link to="/servicios/EV001" className="btn">
-                      Ver más
-                    </Link>
-                  </div>
-                </div>
-              </div>
+                  )
+                })}
             </div>
           </div>
         </section>

@@ -28,7 +28,6 @@ export default function PerfilPage() {
   const [confirmarNuevaContrasena, setConfirmarNuevaContrasena] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [errorContrasena, setErrorContrasena] = useState<string | null>(null)
-  const [guardando, setGuardando] = useState(false)
 
   useEffect(() => {
     obtenerPerfil()
@@ -115,7 +114,6 @@ export default function PerfilPage() {
       }
     }
 
-    setGuardando(true)
     const resultado = await actualizarPerfil({
       nombre: nombre.trim(),
       apellido: apellido.trim(),
@@ -128,8 +126,6 @@ export default function PerfilPage() {
         ? { contrasenaActual, contrasenaNueva: nuevaContrasena }
         : {}),
     })
-    setGuardando(false)
-
     if (resultado.exito) {
       setContrasenaActual('')
       setNuevaContrasena('')
