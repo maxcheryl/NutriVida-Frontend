@@ -1,15 +1,9 @@
-/**
- * Tipos compartidos de la aplicación: catálogo de servicios, usuarios,
- * sesión, carrito y mapas de persistencia.
- */
+/** Tipos de datos que comparten las páginas y servicios de la aplicación. */
 
 /** Roles que puede tener un usuario. */
 export type RolUsuario = 'administrador' | 'recepcionista' | 'cliente'
 
-/**
- * Producto/servicio del catálogo. `imagenUrl` es la URL web externa
- * (Fase 11 / migraciones V1 y V3).
- */
+/** Datos de un servicio que llega desde el catálogo del backend. */
 export interface Servicio {
   codigo: string
   tipo: string
@@ -22,7 +16,7 @@ export interface Servicio {
   imagenUrl?: string
 }
 
-/** Categoría del catálogo; los productos la referencian por nombre (`tipo`). */
+/** Categoría a la que pertenece un servicio. */
 export interface Categoria {
   id: string
   nombre: string
@@ -55,32 +49,17 @@ export interface Sesion {
   rol: RolUsuario
 }
 
-/** Ítem del carrito: copia del producto + cantidad solicitada. */
+/** Servicio elegido para el carrito y la cantidad que se reservará. */
 export interface CarritoItem extends Servicio {
   cantidad: number
 }
 
-/** Contador de intentos fallidos de login por correo. */
-export interface RegistroIntentos {
-  intentos: number
-  bloqueado: boolean
-}
-
-/** Mapa correo → intentos. */
-export type IntentosMap = Record<string, RegistroIntentos>
-
-/** Mapa código de producto → cupos ya reservados. */
-export type ReservadosMap = Record<string, number>
-
 // ==================== ÓRDENES (HISTORIAL DE COMPRAS/RESERVAS) ====================
 
-/** Estados posibles de una orden. Nace RESERVADA; el admin puede cancelarla. */
+/** Una reserva puede estar activa o cancelada. */
 export type EstadoOrden = 'RESERVADA' | 'CANCELADA'
 
-/**
- * Línea de una orden: conserva el precio unitario al momento de la compra
- * (precio histórico), aunque el producto cambie de precio después.
- */
+/** Servicio incluido en una reserva, con su cantidad y precio guardado. */
 export interface DetalleOrden {
   id: number
   productoCodigo: string

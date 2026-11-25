@@ -1,8 +1,4 @@
-/**
- * Panel de gestión (admin o recepcionista): pestaña de stock por producto
- * (edita cupos libres) y pestaña de alta de clientes con las mismas
- * validaciones que el registro (dominio, contraseñas y edades).
- */
+/** Panel para actualizar cupos y crear cuentas de clientes. */
 import { useEffect, useState, type FormEvent } from 'react'
 import { EDAD_MAXIMA, OPCIONES_GENERO, STOCK_MAXIMO } from '../constants'
 import { useToast } from '../contexts/ToastContext'
@@ -44,7 +40,7 @@ export default function GestionPage() {
       setProductos(prods)
       setOrdenes(ords)
     } catch {
-      // Ignorar errores de carga secundaria
+      // Si falla esta carga secundaria, mantenemos disponible el resto del panel.
     }
   }
 
@@ -102,7 +98,7 @@ export default function GestionPage() {
     setErrorStock(null)
     const nuevoStock = stockEditado[codigo]
     if (nuevoStock === undefined) return
-    // NaN = el campo quedó vacío: falla el entero y muestra el cuadrito rojo.
+    // Un campo vacío no es un número válido, así que se muestra su error.
     if (!Number.isInteger(nuevoStock) || nuevoStock < 0 || nuevoStock > STOCK_MAXIMO) {
       setErrorStock(`El stock de ${codigo} debe ser un número entero entre 0 y ${STOCK_MAXIMO}`)
       return
@@ -111,7 +107,7 @@ export default function GestionPage() {
       await actualizarStock(codigo, nuevoStock)
       const data = await listarProductos()
       setProductos(data)
-      // undefined = sin edición pendiente en esta fila.
+      // Si no hay un valor nuevo, se conserva el cupo actual.
       setStockEditado({ ...stockEditado, [codigo]: undefined as unknown as number })
       showToast('Stock actualizado correctamente', 'success')
     } catch (err) {

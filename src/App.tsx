@@ -1,7 +1,6 @@
 /**
- * Árbol raíz: proveedores globales (Toast → Auth → Cart) y todas las rutas.
- * Las rutas protegidas usan los guards ProtectedRoute/StaffRoute/AdminRoute;
- * /gestionVendedor queda como redirección histórica a /gestion.
+ * Reúne las páginas y los estados compartidos de la aplicación.
+ * Los guards reservan las rutas de perfil y gestión para los roles adecuados.
  */
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'

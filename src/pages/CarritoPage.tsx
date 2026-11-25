@@ -1,7 +1,4 @@
-/**
- * Carrito de reservas: lista (tabla en desktop / cards en mobile) con precios
- * frescos del catálogo, control de cupos por fila y confirmación de reserva.
- */
+/** Permite revisar los servicios elegidos y confirmar una reserva. */
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { getBadgeClass, getTipoIcon } from '../data/servicios'
@@ -27,7 +24,7 @@ export default function CarritoPage() {
   const [confirmando, setConfirmando] = useState(false)
   const [ordenConfirmada, setOrdenConfirmada] = useState<Orden | null>(null)
 
-  // Total del carrito calculado a partir de los ítems en memoria
+  // Calcula el total con los precios actuales del catálogo.
   const total = carrito.reduce((sum, s) => sum + s.precio * s.cantidad, 0)
 
   function agregarDesdeCarrito(codigo: string) {
@@ -54,7 +51,7 @@ export default function CarritoPage() {
       setModalLoginAbierto(true)
       return
     }
-    // Revalida cupos antes de enviar
+    // Comprueba otra vez los cupos antes de crear la reserva.
     const excedido = carrito.find((item) => cupoDisponible(item.codigo, item.cuposIniciales) < 0)
     if (excedido) {
       showToast(

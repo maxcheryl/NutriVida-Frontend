@@ -1,7 +1,4 @@
-/**
- * Punto de entrada: monta <App> con Router, proveedores de CSS (bootstrap)
- * y StrictMode (doble render en desarrollo para detectar efectos impuros).
- */
+/** Carga los estilos y monta la aplicación con el enrutador activo. */
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'

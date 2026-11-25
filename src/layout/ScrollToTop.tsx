@@ -1,6 +1,4 @@
-/**
- * Reinicia el scroll arriba al cambiar de ruta (render null: no aporta UI).
- */
+/** Lleva la página al inicio cada vez que cambia la ruta. */
 import { useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
 

@@ -1,8 +1,4 @@
-/**
- * Perfil del usuario en sesión: datos personales + cambio opcional de
- * contraseña. La sesión se sincroniza vía AuthContext.actualizarPerfil
- * (búsqueda por id, segura ante cambios de correo).
- */
+/** Permite actualizar los datos personales y cambiar la contraseña. */
 import { useEffect, useState, type FormEvent } from 'react'
 import { EDAD_MAXIMA, OPCIONES_GENERO, OPCIONES_REGION } from '../constants'
 import { useAuth } from '../contexts/AuthContext'
@@ -47,7 +43,7 @@ export default function PerfilPage() {
 
   const hoy = new Date().toISOString().split('T')[0]
 
-  /** Edad en años cumplidos (calendaria); validators.calcularEdad devuelve años con decimales. */
+  /** Calcula los años cumplidos a partir de la fecha de nacimiento. */
   function calcularEdadLocal(fecha: string): number {
     if (!fecha) return 0
     const nacimiento = new Date(fecha)
@@ -92,8 +88,7 @@ export default function PerfilPage() {
       return
     }
 
-    // El cambio de contraseña solo aplica si el usuario tocó alguno de los 3 campos;
-    // si los dejó vacíos, se actualiza el perfil sin tocar la contraseña.
+    // Si los campos de contraseña quedan vacíos, solo se actualizan los datos del perfil.
     const quiereCambiarContrasena =
       contrasenaActual.trim() !== '' || nuevaContrasena !== '' || confirmarNuevaContrasena !== ''
 

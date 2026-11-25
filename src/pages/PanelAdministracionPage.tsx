@@ -1,8 +1,4 @@
-/**
- * Panel de administración (solo admin): CRUD de usuarios, productos y
- * categorías, con validaciones completas, modales de confirmación y
- * protección de la cuenta propia.
- */
+/** Permite al administrador gestionar usuarios, servicios y categorías. */
 import { useEffect, useState, type FormEvent } from 'react'
 import {
   EDAD_MAXIMA,

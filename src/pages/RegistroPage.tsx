@@ -1,7 +1,4 @@
-/**
- * Alta de cuenta de cliente: valida en el cliente (campos, contraseñas,
- * dominio, fecha/edad, términos y correo repetido) y registra vía AuthContext.
- */
+/** Valida los datos del formulario y crea una cuenta de cliente. */
 import { useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { EDAD_MAXIMA, OPCIONES_GENERO, OPCIONES_REGION } from '../constants'
@@ -36,14 +33,13 @@ export default function RegistroPage() {
     setEsExito(false)
   }
 
-  /** Pone un error en el cuadrito rojo bajo el formulario (limpia el éxito). */
+  /** Muestra un error y quita cualquier mensaje de éxito anterior. */
   function mostrarError(mensaje: string) {
     setMensajeRegistro(mensaje)
     setEsExito(false)
   }
 
-  // Validaciones en orden: vacíos → contraseñas → dominio → fecha futura →
-  // edad (14..EDAD_MAXIMA) → términos → llamada al backend.
+  // Valida los datos antes de enviar el registro al backend.
   async function manejarSubmit(e: FormEvent) {
     e.preventDefault()
     limpiarMensajes()

@@ -1,7 +1,4 @@
-/**
- * Servicio de órdenes (compras/reservas): confirmación del carrito,
- * historial del cliente y gestión administrativa.
- */
+/** Reúne las solicitudes para crear y consultar reservas. */
 import { api } from '../api/axiosConfig'
 import type { Orden } from '../types'
 
@@ -10,31 +7,25 @@ export interface ItemOrden {
   cantidad: number
 }
 
-/** Confirma el carrito: crea la orden RESERVADA y descuenta cupos en el backend. */
+/** Envía los servicios del carrito para crear una reserva. */
 export async function crearOrden(items: ItemOrden[]): Promise<Orden> {
   const respuesta = await api.post<Orden>('/ordenes', { items })
   return respuesta.data
 }
 
-/** Historial de órdenes del cliente autenticado. */
+/** Lista las reservas de la persona que inició sesión. */
 export async function listarMisOrdenes(): Promise<Orden[]> {
   const respuesta = await api.get<Orden[]>('/ordenes/mias')
   return respuesta.data
 }
 
-/** Detalle de una orden con sus productos, cantidades y precios históricos. */
-export async function obtenerOrden(id: number): Promise<Orden> {
-  const respuesta = await api.get<Orden>(`/ordenes/${id}`)
-  return respuesta.data
-}
-
-/** Listado general de órdenes (solo administrador). */
+/** Lista todas las reservas para el panel de gestión. */
 export async function listarTodasOrdenes(): Promise<Orden[]> {
   const respuesta = await api.get<Orden[]>('/ordenes')
   return respuesta.data
 }
 
-/** Cancela una orden y devuelve los cupos (solo administrador). */
+/** Cancela una reserva y pide al backend que devuelva sus cupos. */
 export async function cancelarOrden(id: number): Promise<Orden> {
   const respuesta = await api.put<Orden>(`/ordenes/${id}/cancelar`)
   return respuesta.data

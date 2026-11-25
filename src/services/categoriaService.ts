@@ -1,11 +1,8 @@
-/**
- * Servicio de categorías: consulta pública y administración (CRUD).
- * El backend impide eliminar categorías que tengan productos asociados.
- */
+/** Reúne las solicitudes para consultar y administrar categorías. */
 import { api } from '../api/axiosConfig'
 import type { Categoria } from '../types'
 
-/** Lista todas las categorías. */
+/** Lista las categorías disponibles en el catálogo. */
 export async function listarCategorias(): Promise<Categoria[]> {
   const respuesta = await api.get<Categoria[]>('/categorias')
   return respuesta.data

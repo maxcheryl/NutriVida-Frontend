@@ -1,8 +1,6 @@
 /**
- * Cliente HTTP centralizado: instancia única de Axios contra la API de NutriVida.
- * - `withCredentials` envía la cookie httpOnly del JWT en cada petición.
- * - Ante un 401 intenta renovar la sesión (`/auth/refresh`) y reintenta una vez;
- *   si la renovación falla, avisa a la capa de autenticación para cerrar sesión.
+ * Envía las solicitudes al backend e incluye las cookies de sesión.
+ * Si la sesión venció, intenta renovarla una vez y luego repite la solicitud.
  */
 import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios'
 
@@ -14,7 +12,7 @@ export const api = axios.create({
   withCredentials: true,
 })
 
-/** Se registra desde AuthContext: se invoca cuando la sesión ya no puede renovarse. */
+/** Permite avisar al contexto de autenticación cuando la sesión ya venció. */
 let alExpirarSesion: (() => void) | null = null
 
 export function setAlExpirarSesion(handler: () => void): void {
@@ -26,7 +24,7 @@ api.interceptors.response.use(
   async (error: AxiosError) => {
     const config = error.config as ConfigReintento | undefined
     const url = config?.url ?? ''
-    // login/registro/logout/refresh no deben disparar un refresh en cadena
+    // Estas rutas no deben volver a iniciar el proceso de renovación.
     const sinRefresh = [
       '/auth/login',
       '/auth/registro',
@@ -46,12 +44,10 @@ api.interceptors.response.use(
   },
 )
 
-/**
- * Extrae un mensaje legible del error para mostrarlo al usuario.
- * Prioriza el mensaje que devuelve el backend (`mensaje` o `error`).
- */
+/** Devuelve un mensaje sencillo para mostrar cuando una solicitud falla. */
 export function mensajeDeError(error: unknown): string {
   if (axios.isAxiosError(error)) {
+    // Primero muestra el mensaje concreto que envió el backend.
     const data = error.response?.data as { mensaje?: string; error?: string } | undefined
     const mensaje = data?.mensaje ?? data?.error
     if (mensaje) return mensaje

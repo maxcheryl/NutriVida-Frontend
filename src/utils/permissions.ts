@@ -1,7 +1,4 @@
-/**
- * Verificadores de rol sobre la sesión actual; se usan en las rutas
- * protegidas (AdminRoute/StaffRoute) y en el navbar.
- */
+/** Comprueba los permisos de la sesión antes de mostrar funciones restringidas. */
 import type { Sesion } from '../types'
 
 export function esAdmin(usuario: Sesion | null): boolean {
@@ -12,7 +9,7 @@ export function esRecepcionista(usuario: Sesion | null): boolean {
   return usuario?.rol === 'recepcionista'
 }
 
-/** Admin o recepcionista: puede operar la pestaña de stock de Gestión. */
+/** Comprueba si la persona puede actualizar los cupos de los servicios. */
 export function puedeGestionarStock(usuario: Sesion | null): boolean {
   return esAdmin(usuario) || esRecepcionista(usuario)
 }

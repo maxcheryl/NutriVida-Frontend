@@ -1,7 +1,4 @@
-/**
- * Modal genérico con control de show/hide vía la API de Bootstrap.
- * Usa refs para no recrear la instancia de Bootstrap en cada render.
- */
+/** Modal reutilizable para confirmaciones y formularios. */
 import { useEffect, useRef } from 'react'
 import { Modal } from 'bootstrap'
 
@@ -14,7 +11,7 @@ interface AppModalProps {
 export default function AppModal({ show, onHide, children }: AppModalProps) {
   const elementoRef = useRef<HTMLDivElement>(null)
   const modalRef = useRef<Modal | null>(null)
-  // onHide en ref: el listener captura la última versión sin re-registrarse
+  // Mantiene disponible la última función sin volver a crear el modal.
   const onHideRef = useRef(onHide)
   onHideRef.current = onHide
 
@@ -34,7 +31,7 @@ export default function AppModal({ show, onHide, children }: AppModalProps) {
     }
   }, [show])
 
-  // Solo al desmontar: limpia backdrop y estado del body
+  // Quita la capa oscura y restaura la página al cerrar el componente.
   useEffect(() => {
     return () => {
       modalRef.current?.dispose()

@@ -1,8 +1,4 @@
-/**
- * Historial de compras y reservas del cliente (Fase 11.2).
- * Muestra las órdenes del usuario autenticado obtenidas desde /api/v1/ordenes/mias,
- * conservando los precios unitarios históricos registrados al momento de la compra.
- */
+/** Muestra las reservas del usuario con los precios guardados al confirmarlas. */
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import Breadcrumb from '../layout/Breadcrumb'
@@ -196,7 +192,7 @@ export default function HistorialPage() {
                     {/* PIE DE ORDEN: TOTAL */}
                     <div className="card-footer bg-light border-0 py-3 px-4 d-flex justify-content-between align-items-center">
                       <span className="text-muted small">
-                        * Los precios mostrados corresponden al valor del momento de la compra.
+                        * Se muestra el precio que tenía cada servicio al reservarlo.
                       </span>
                       <div className="d-flex align-items-baseline gap-2">
                         <span className="text-secondary fw-semibold">Total:</span>

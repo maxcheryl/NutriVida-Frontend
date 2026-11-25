@@ -1,7 +1,4 @@
-/**
- * Servicio de autenticación: registro, inicio/cierre de sesión, restauración
- * y renovación del JWT (cookie httpOnly gestionada por el backend).
- */
+/** Reúne las solicitudes de registro e inicio y cierre de sesión. */
 import { api } from '../api/axiosConfig'
 import type { Sesion } from '../types'
 
@@ -16,24 +13,24 @@ export interface DatosRegistro {
   direccion: string
 }
 
-/** Registra un usuario público con rol cliente. Devuelve la sesión creada. */
+/** Crea una cuenta de cliente y devuelve los datos de la sesión iniciada. */
 export async function registrarUsuario(datos: DatosRegistro): Promise<Sesion> {
   const respuesta = await api.post<Sesion>('/auth/registro', datos)
   return respuesta.data
 }
 
-/** Valida credenciales en el backend y recibe la cookie de sesión. */
+/** Envía las credenciales al backend para iniciar sesión. */
 export async function iniciarSesion(correo: string, contrasena: string): Promise<Sesion> {
   const respuesta = await api.post<Sesion>('/auth/login', { correo, contrasena })
   return respuesta.data
 }
 
-/** Cierra la sesión en el backend (borra las cookies JWT). */
+/** Pide al backend que cierre la sesión y borre sus cookies. */
 export async function cerrarSesionBackend(): Promise<void> {
   await api.post('/auth/logout')
 }
 
-/** Devuelve el usuario de la sesión actual según la cookie JWT (null si no hay). */
+/** Busca la sesión activa; devuelve null si no hay una sesión válida. */
 export async function obtenerSesion(): Promise<Sesion | null> {
   try {
     const respuesta = await api.get<Sesion>('/auth/me')

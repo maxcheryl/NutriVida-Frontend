@@ -1,7 +1,4 @@
-/**
- * Guard de rutas: administrador o recepcionista (panel de Gestión);
- * el resto va a /login o /acceso-denegado.
- */
+/** Permite entrar a Gestión a administradores y recepcionistas. */
 import type { ReactNode } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'

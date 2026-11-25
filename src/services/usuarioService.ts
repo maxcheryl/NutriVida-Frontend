@@ -1,7 +1,4 @@
-/**
- * Servicio de usuarios: gestión administrativa (CRUD), creación por
- * recepcionista y actualización del perfil del usuario autenticado.
- */
+/** Reúne las solicitudes de administración de usuarios y perfil. */
 import { api } from '../api/axiosConfig'
 import type { Sesion, Usuario } from '../types'
 

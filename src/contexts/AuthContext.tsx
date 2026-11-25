@@ -1,8 +1,4 @@
-/**
- * Contexto de autenticación: sesión actual, login/logout, registro y
- * actualización de perfil conectados al backend Spring Boot mediante Axios.
- * Cero uso de LocalStorage: la sesión se valida contra la cookie HttpOnly.
- */
+/** Mantiene los datos de la persona que inició sesión y las acciones de cuenta. */
 import { createContext, useContext, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { Sesion } from '../types'
@@ -39,7 +35,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate()
 
   useEffect(() => {
-    // Al montar, verificamos si existe sesión activa en el backend vía cookie HttpOnly
+    // Al abrir la app, pregunta al backend si hay una sesión activa.
     obtenerSesion()
       .then((sesion) => {
         setUsuario(sesion)
@@ -51,7 +47,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setCargando(false)
       })
 
-    // Escuchar cuando el interceptor detecte que no se pudo renovar el token
+    // El interceptor avisa si el backend ya no puede renovar la sesión.
     setAlExpirarSesion(() => {
       setUsuario(null)
     })
@@ -75,7 +71,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await cerrarSesionBackend()
     } catch {
-      // Ignorar error si el token ya expiró
+      // Aunque el backend no responda, cerramos la sesión localmente.
     } finally {
       setUsuario(null)
       navigate('/')
@@ -107,7 +103,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const perfil = await obtenerPerfil()
       setUsuario(perfil)
     } catch {
-      // Sesión no válida
+      // Si no se puede cargar el perfil, se conserva el estado actual.
     }
   }
 

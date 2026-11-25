@@ -1,8 +1,4 @@
-/**
- * Contexto del carrito: mantiene en memoria (React state) los servicios seleccionados.
- * Cero LocalStorage. Al confirmar, delega al backend (ordenService.crearOrden)
- * para descontar cupos y registrar la orden con precios históricos en MySQL.
- */
+/** Mantiene el carrito en memoria mientras la aplicación está abierta y confirma reservas. */
 import { createContext, useContext, useState } from 'react'
 import type { CarritoItem, Orden, Servicio } from '../types'
 import { crearOrden } from '../services/ordenService'
@@ -33,10 +29,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const totalUnidades = carrito.reduce((sum, item) => sum + item.cantidad, 0)
 
-  /**
-   * Cupos disponibles: calcula los cupos libres descontando las unidades
-   * que ya están agregadas en el carrito.
-   */
+  /** Resta del total disponible los servicios que ya están en el carrito. */
   function cupoDisponible(codigo: string, cuposBase?: number): number {
     const enCarrito = carrito.find((i) => i.codigo === codigo)?.cantidad ?? 0
     const base =
@@ -51,6 +44,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       const index = prev.findIndex((i) => i.codigo === servicio.codigo)
       if (index >= 0) {
         const itemActual = prev[index]
+        // No permite reservar más unidades que los cupos disponibles.
         if (itemActual.cantidad >= servicio.cuposIniciales) {
           return prev
         }
@@ -67,6 +61,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       const index = prev.findIndex((i) => i.codigo === codigo)
       if (index === -1) return prev
       const itemActual = prev[index]
+      // Al reducir la última unidad, se quita el servicio del carrito.
       if (itemActual.cantidad <= 1) {
         return prev.filter((i) => i.codigo !== codigo)
       }
@@ -84,11 +79,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setCarrito([])
   }
 
-  /**
-   * Confirma la reserva comunicándose con el endpoint /api/v1/ordenes.
-   * El backend valida cupos atómicamente, descuenta el stock en la BD y registra
-   * la orden con precios históricos. Si tiene éxito, vacía el carrito.
-   */
+  /** Envía la reserva al backend y vacía el carrito solo si se guardó correctamente. */
   async function confirmarReserva(): Promise<ResultadoConfirmacion> {
     if (carrito.length === 0) {
       return { exito: false, mensaje: 'El carrito está vacío' }
@@ -107,7 +98,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }
 
   function sincronizar() {
-    // Carrito en memoria: no requiere sincronización de storage
+    // El carrito no necesita recargarse porque solo se guarda en memoria.
   }
 
   return (

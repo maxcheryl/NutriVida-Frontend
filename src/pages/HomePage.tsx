@@ -1,7 +1,4 @@
-/**
- * Home institucional: hero, sección "quiénes somos"/equipo, formulario de
- * contacto (con validación propia) y CTA final.
- */
+/** Muestra la página de inicio y los servicios destacados. */
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { listarProductos } from '../services/productoService'
@@ -40,6 +37,7 @@ export default function HomePage() {
   useEffect(() => {
     async function cargarProductos() {
       try {
+        // Los nombres y precios de las tarjetas siempre vienen del backend.
         setProductos(await listarProductos())
       } catch {
         setErrorProductos('No se pudo conectar con el catálogo de servicios.')
@@ -51,8 +49,7 @@ export default function HomePage() {
     cargarProductos()
   }, [])
 
-  // Contacto: valida vacíos, largo mínimo del mensaje y dominio institucional;
-  // el formulario usa noValidate para que los errores salgan en el cuadrito rojo.
+  // Comprueba los campos antes de mostrar la confirmación del formulario.
   function manejarContacto(e: FormEvent) {
     e.preventDefault()
     setErrorContacto(null)

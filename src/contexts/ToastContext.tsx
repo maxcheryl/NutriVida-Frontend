@@ -1,7 +1,4 @@
-/**
- * Toast global de la app: `showToast(mensaje, tipo)` muestra una notificación
- * flotante (bootstrap) abajo a la derecha durante 2,5 segundos.
- */
+/** Muestra mensajes temporales para confirmar acciones o explicar errores. */
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { Toast } from 'bootstrap'
 
@@ -21,6 +18,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   const bsToastRef = useRef<Toast | null>(null)
 
   const showToast = useCallback((msg: string, t: TipoToast) => {
+    // Cambiar la clave también vuelve a mostrar un mensaje que se repite.
     setMensaje(msg)
     setTipo(t)
     setClave((c) => c + 1)
@@ -28,6 +26,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (clave === 0 || !toastRef.current) return
+    // Crea una notificación nueva cada vez que cambia el mensaje.
     bsToastRef.current = new Toast(toastRef.current, { delay: 2500 })
     bsToastRef.current.show()
   }, [clave])
